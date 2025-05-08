@@ -1,0 +1,78 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# IDE specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# Python packaging and build artifacts
+build/
+dist/
+*.egg-info/
+*.egg
+pip-wheel-metadata/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Logs and databases
+*.log
+*.sqlite
+*.db
+
+# Streamlit secrets
+.secrets/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Testing
+.pytest_cache/
+coverage.xml
+*.cover
+htmlcov/
+
+# Langsmith
+.langchain_debug/
+
+# Visual Studio Code
+.history/
+*.code-workspace
+
+# Windows
+*.exe
+*.msi
+*.bat
+
+# macOS
+*.dmg
+
+# Project specific ignores
+/assets/*.tmp
+/test_outputs/
+/temp/
+
+# Exception: Keep the CSS file
+!assets/style.css

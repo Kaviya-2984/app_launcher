@@ -1,0 +1,6 @@
+streamlit
+langchain
+langchain_openai
+python-dotenv
+psutil
+pywin32==306; sys_platform == 'win32'

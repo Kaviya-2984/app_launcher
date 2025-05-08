@@ -1,0 +1,35 @@
+.stApp {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.stTextInput>div>div>input {
+    border-radius: 20px;
+    padding: 10px 15px;
+}
+
+.stButton>button {
+    border-radius: 20px;
+    padding: 10px 20px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+}
+
+.stChatMessage {
+    border-radius: 15px;
+    padding: 15px;
+    margin: 10px 0;
+}
+
+.user-message {
+    background-color: #f0f2f6;
+    margin-left: 20%;
+}
+
+.assistant-message {
+    background-color: #4CAF50;
+    color: white;
+    margin-right: 20%;
+}
