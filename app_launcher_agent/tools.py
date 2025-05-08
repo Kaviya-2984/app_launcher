@@ -1,8 +1,68 @@
 import os
 import subprocess
 import psutil
-from typing import Optional
 import platform
+import tempfile
+from typing import Dict, Optional
+import time
+
+class TextEditorTool:
+    """Tool for writing content to text editors."""
+    
+    def __init__(self, llm):
+        self.system = platform.system()
+        self.llm = llm
+    
+    def _generate_content(self, topic: str) -> str:
+        """Generate content about the given topic using LLM."""
+        prompt = f"Write a comprehensive, well-structured text about: {topic}\n\n" \
+                 "The text should:\n" \
+                 "- Be between 300-500 words\n" \
+                 "- Have proper paragraphs\n" \
+                 "- Be informative and engaging\n" \
+                 "- Avoid code examples\n" \
+                 "- Use Markdown formatting for headings and lists"
+        
+        response = self.llm.invoke(prompt)
+        return response.content
+    
+    def write_to_file(self, input_text: str) -> str:
+        """Modified to accept string input directly"""
+        try:
+            # Default values
+            app_name = 'notepad.exe'
+            
+            # If input is a dictionary (old format), convert to string
+            if isinstance(input_text, dict):
+                topic = input_text.get('topic', '')
+                app_name = input_text.get('app_name', 'notepad.exe')
+            else:
+                # Extract topic from string input
+                topic = input_text
+                if "write about:" in topic.lower():
+                    topic = topic.split("write about:")[1].split("in")[0].strip()
+            
+            content = self._generate_content(topic)
+            
+            # Create temp file
+            with tempfile.NamedTemporaryFile(suffix='.txt', delete=False, mode='w+', encoding='utf-8') as tmp:
+                file_path = tmp.name
+                tmp.write(content)
+            
+            # Open file in specified editor
+            if self.system == "Windows":
+                subprocess.Popen([app_name, file_path], shell=True)
+            elif self.system == "Darwin":  # macOS
+                subprocess.Popen(["open", "-a", "TextEdit", file_path])
+            elif self.system == "Linux":
+                subprocess.Popen(["gedit", file_path])
+            
+            time.sleep(1)  # Small delay to ensure file is opened
+            
+            return f"Successfully wrote about '{topic}' and opened in {app_name}"
+        
+        except Exception as e:
+            return f"Error writing to file: {str(e)}"
 
 class AppLauncherTool:
     """Tool for launching applications on the system."""

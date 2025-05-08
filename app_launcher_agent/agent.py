@@ -10,7 +10,12 @@ class AppLauncherAgent:
         self.llm = llm
         self.tools = self._setup_tools()
         self.agent = self._setup_agent()
-        self.agent_executor = AgentExecutor(agent=self.agent, tools=self.tools, verbose=True)
+        self.agent_executor = AgentExecutor(
+            agent=self.agent, 
+            tools=self.tools, 
+            verbose=True,
+            handle_parsing_errors=True  # Add this line
+        )
     
     def _setup_tools(self) -> List[Tool]:
         """Initialize and return the tools for the agent."""
@@ -23,7 +28,7 @@ class AppLauncherAgent:
                 description="Useful for launching applications on Windows computers. "
                "For Windows apps, use exact names like 'notepad.exe', 'calc.exe', 'chrome.exe'. "
                "For Microsoft Office apps, use 'winword.exe', 'excel.exe', 'powerpnt.exe'."
-)
+            )
         ]
     
     def _setup_agent(self):

@@ -1,81 +1,81 @@
 import streamlit as st
 from langchain_core.messages import AIMessage, HumanMessage
 from app_launcher_agent.agent import AppLauncherAgent
+from app_launcher_agent.writer_agent import WritingAgent
 from app_launcher_agent.utils import format_chat_history
 from dotenv import load_dotenv
 import os
 
-# Initialize your LLM (this would be your actual implementation)
+# Initialize your LLM (same as before)
 from langchain_openai import ChatOpenAI
 
-# Load environment variables
 load_dotenv()
 
-# Initialize the LLM with your custom configuration
 def initialize_llm():
     return ChatOpenAI(
         model="gpt-3.5-turbo",
         temperature=0.1,
         base_url="https://api.nexus.navigatelabsai.com",
-        api_key=os.getenv("API_KEY")  # Store your API key in .env file
+        api_key=os.getenv("API_KEY")
     )
 
-# Initialize the Streamlit app
 def main():
-    # Set page config
     st.set_page_config(
-        page_title="AI App Launcher",
+        page_title="AI Assistant",
         page_icon="🚀",
         layout="centered"
     )
     
-    # Inject custom CSS
     with open("assets/style.css") as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
     
-    # Initialize session state
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
     
-    if "agent" not in st.session_state:
-        llm = initialize_llm()
-        st.session_state.agent = AppLauncherAgent(llm)
+    if "llm" not in st.session_state:
+        st.session_state.llm = initialize_llm()
     
-    # Header
-    st.title("🚀 AI App Launcher")
+    if "app_agent" not in st.session_state:
+        st.session_state.app_agent = AppLauncherAgent(st.session_state.llm)
+    
+    if "writer_agent" not in st.session_state:
+        st.session_state.writer_agent = WritingAgent(st.session_state.llm)
+    
+    st.title("🚀 AI Assistant")
     st.markdown("""
-    This AI assistant can open applications on your computer. 
-    Try asking it to open apps like Chrome, Notepad, or Calculator.
+    This AI assistant can:
+    - Open applications on your computer
+    - Generate and write content to text editors
     """)
     
-    # Display chat history
     for message in format_chat_history(st.session_state.chat_history):
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
     
-    # Chat input
-    user_input = st.chat_input("What app would you like to open?")
+    user_input = st.chat_input("What would you like me to do?")
     
     if user_input:
-        # Add user message to chat history
         st.session_state.chat_history.append(HumanMessage(content=user_input))
         
-        # Display user message
         with st.chat_message("user"):
             st.markdown(user_input)
         
-        # Get AI response
-        ai_response = st.session_state.agent.run(
-            user_input,
-            st.session_state.chat_history
-        )
+        # Determine which agent to use
+        if any(keyword in user_input.lower() for keyword in ["write", "essay", "article", "compose"]):
+            result = st.session_state.writer_agent.run(
+                user_input,
+                st.session_state.chat_history
+            )
+        else:
+            result = st.session_state.app_agent.run(
+                user_input,
+                st.session_state.chat_history
+            )
         
-        # Add AI response to chat history
-        st.session_state.chat_history.append(AIMessage(content=ai_response))
+        st.session_state.chat_history.append(AIMessage(content=result))
         
-        # Display AI response
         with st.chat_message("assistant"):
-            st.markdown(ai_response)
+            st.markdown(result)
 
 if __name__ == "__main__":
     main()
