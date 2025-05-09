@@ -27,10 +27,10 @@ class WritingAgent:
             Tool(
                 name="text_editor",
                 func=editor.write_to_file,
-                description="Useful ONLY for writing content to text files or word processors. "
-                           "Input MUST be a string containing ONLY the topic to write about. "
-                           "Example: 'Artificial intelligence'"
-            )
+                description="Useful for writing content to text files or word processors. "
+                   "Input can specify editor with 'in winword.exe' or 'in wordpad.exe'. "
+                   "Example: 'Artificial intelligence in winword.exe'"
+    )
         ]
     
     def _setup_agent(self):
@@ -49,7 +49,12 @@ class WritingAgent:
         return agent
     
     def _process_writing_request(self, input_text: str) -> str:
-        """Clean and prepare the writing request."""
+        """Clean and prepare the writing request, preserving editor info."""
+        # Keep the editor information if specified
+        if "winword.exe" in input_text.lower() or "wordpad.exe" in input_text.lower():
+            return input_text
+        
+        # Otherwise process as normal
         remove_phrases = [
             "write about", "write an essay about", 
             "create a document about", "compose text about",
