@@ -95,7 +95,7 @@ class AppLauncherTool:
                     "notepad": "notepad.exe",
                     "chrome": "chrome.exe",
                     "calculator": "calc.exe",
-                    "word": "winword.exe",
+                    "word": ("winword.exe", "/n"),
                     "excel": "excel.exe",
                     "powerpoint": "powerpnt.exe",
                     "paint": "mspaint.exe",

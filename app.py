@@ -4,6 +4,7 @@ from app_launcher_agent.agent import AppLauncherAgent
 from app_launcher_agent.writer_agent import WritingAgent
 from app_launcher_agent.file_agent import FileHandlingAgent
 from app_launcher_agent.code_agent import CodeGenerationAgent
+from app_launcher_agent.calculation_agent import CalculationAgent
 from app_launcher_agent.utils import format_chat_history
 from dotenv import load_dotenv
 import os
@@ -40,6 +41,9 @@ def main():
         st.session_state.llm = initialize_llm()
     
     # Then initialize agents that depend on LLM
+    if "calc_agent" not in st.session_state:
+        st.session_state.calc_agent = CalculationAgent(st.session_state.llm)
+
     if "app_agent" not in st.session_state:
         st.session_state.app_agent = AppLauncherAgent(st.session_state.llm)
     
@@ -79,6 +83,8 @@ def main():
         
         if any(kw in clean_input.lower() for kw in ["write", "essay", "article"]):
             agent = st.session_state.writer_agent
+        elif any(kw in clean_input.lower() for kw in ["calculate", "+", "-", "*", "/", "="]):
+            agent = st.session_state.calc_agent
         elif any(kw in clean_input.lower() for kw in ["open", "launch", "start"]):
             agent = st.session_state.app_agent
         elif any(kw in clean_input.lower() for kw in ["list", "create", "delete", "copy", "move"]):
