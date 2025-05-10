@@ -1,3 +1,4 @@
+import re
 import os
 import subprocess
 import psutil
@@ -34,6 +35,8 @@ class TextEditorTool:
             topic = input_text
             
             # Check if specific editor is requested
+            if any(kw in input_text.lower() for kw in ["code", "program", "function"]):
+                return "Error: Use code generation commands for programming tasks"
             if "winword.exe" in input_text.lower():
                 app_name = 'winword.exe'
                 # Extract topic by removing the editor part
@@ -149,56 +152,57 @@ class AppLauncherTool:
             return f"Error launching {app_name}: {str(e)}"
         
 class CodeGenerationTool:
-    """Tool for generating and writing code to editors."""
-    
-    def __init__(self, llm):
+
+    def __init__(self, llm):  # Add constructor
         self.llm = llm
-        self.editor_tool = TextEditorTool(llm)
+        self.editor_tool = TextEditorTool(llm)  # Pass LLM to TextEditorTool
         self.system = platform.system()
-    
+        
     def _generate_code(self, language: str, problem: str) -> str:
-        """Generate code using LLM."""
+        """Generate code using LLM with strict code-only output"""
         prompt = (
             f"Write a {language} program to {problem}.\n"
             "Requirements:\n"
-            "- Include proper comments\n"
-            "- Use standard naming conventions\n"
-            "- Include necessary imports\n"
-            "- Add error handling if applicable\n"
-            "- Ensure code is properly indented\n"
-            "- Include example usage if possible\n\n"
-            "Output only the raw code without markdown formatting or additional explanations."
+            "- Output ONLY the code without any explanations\n"
+            "- Include proper comments in the code\n"
+            "- Use standard libraries only\n"
+            "- Add error handling if applicable\n\n"
+            "CODE:"
         )
         
         response = self.llm.invoke(prompt)
-        return response.content
+        return self._clean_code_output(response.content)
+
+    def _clean_code_output(self, code: str) -> str:
+        """Remove markdown and ensure clean code"""
+        # Remove code blocks markers
+        code = code.replace("```python", "").replace("```", "")
+        # Remove any remaining markdown
+        return re.sub(r'^\[.*?\]\s*', '', code, flags=re.MULTILINE).strip()
     
     def generate_and_write_code(self, input_text: str) -> str:
         """Handle code generation and writing to editor."""
         try:
-            # Parse input (language, problem, editor)
-            parts = input_text.split(";")
-            language = parts[0].strip()
-            problem = parts[1].strip()
+            # Improved parsing with fallback
+            parts = input_text.split(';', 2)
+            language = parts[0].strip() if len(parts) > 0 else "python"
+            problem = parts[1].strip() if len(parts) > 1 else input_text
             editor = parts[2].strip() if len(parts) > 2 else "notepad.exe"
             
             # Generate code
             code = self._generate_code(language, problem)
             
-            # Create temp file with proper extension
-            ext_map = {
-                "python": ".py",
-                "java": ".java",
-                "c++": ".cpp",
-                "javascript": ".js"
-            }
-            ext = ext_map.get(language.lower(), ".txt")
-            
-            with tempfile.NamedTemporaryFile(suffix=ext, delete=False, mode='w+', encoding='utf-8') as tmp:
-                file_path = tmp.name
+            # Create temp file
+            with tempfile.NamedTemporaryFile(
+                suffix=self._get_extension(language),
+                delete=False,
+                mode='w+', 
+                encoding='utf-8'
+            ) as tmp:
                 tmp.write(code)
-            
-            # Open in specified editor
+                file_path = tmp.name
+
+            # Open editor
             if self.system == "Windows":
                 subprocess.Popen([editor, file_path], shell=True)
             elif self.system == "Darwin":
@@ -206,8 +210,105 @@ class CodeGenerationTool:
             elif self.system == "Linux":
                 subprocess.Popen(["gedit", file_path])
             
-            time.sleep(1)  # Ensure file opens
-            return f"Successfully generated {language} code for {problem} and opened in {editor}"
+            return f"Generated {language} code for {problem} and opened in {editor}" 
         
+        except Exception as e:  # Added exception handling
+            return f"Code generation failed: {str(e)}"
+
+        
+    def _get_extension(self, language: str) -> str:
+        ext_map = {
+            "python": ".py",
+            "java": ".java",
+            "c++": ".cpp",
+            "javascript": ".js"
+        }
+        return ext_map.get(language.lower(), ".txt")           
+
+class SystemOperationsTool:
+    """Windows-specific system operations tool"""
+    
+    def __init__(self):
+        self.volume_step = 20  # Percentage per adjustment
+        self.brightness_step = 20  # Percentage per adjustment
+
+    def _execute_command(self, command: list) -> str:
+        """Execute Windows command safely"""
+        try:
+            result = subprocess.run(
+                command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                shell=True
+            )
+            return result.stdout.strip() or "Success"
         except Exception as e:
-            return f"Code generation error: {str(e)}"        
+            return f"Error: {str(e)}"
+
+    def adjust_brightness(self, operation: str) -> str:
+        """Adjust screen brightness on Windows with proper COM initialization"""
+        try:
+            import pythoncom
+            import wmi
+            
+            # Initialize COM for this thread
+            pythoncom.CoInitialize()
+            
+            # Create WMI connection
+            c = wmi.WMI(namespace='wmi')
+            
+            # Get current brightness
+            current = c.WmiMonitorBrightness()[0].CurrentBrightness
+            
+            # Calculate new brightness
+            if operation == "increase":
+                new = min(100, current + self.brightness_step)
+            else:
+                new = max(0, current - self.brightness_step)
+            
+            # Set new brightness
+            c.WmiMonitorBrightnessMethods()[0].WmiSetBrightness(new, 0)
+            
+            return f"Brightness set to {new}%"
+        except Exception as e:
+            return f"Brightness error: {str(e)}"
+        finally:
+            # Clean up COM initialization
+            pythoncom.CoUninitialize()
+
+    def adjust_volume(self, operation: str) -> str:
+        """Adjust system volume on Windows"""
+        try:
+            import comtypes
+            from ctypes import cast, POINTER
+            from comtypes import CLSCTX_ALL
+            from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
+            
+            devices = AudioUtilities.GetSpeakers()
+            interface = devices.Activate(
+                IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
+            volume = cast(interface, POINTER(IAudioEndpointVolume))
+            
+            current = volume.GetMasterVolumeLevelScalar()
+            step = self.volume_step/100
+            
+            if operation == "increase":
+                new = min(1.0, current + step)
+            else:
+                new = max(0.0, current - step)
+            
+            volume.SetMasterVolumeLevelScalar(new, None)
+            return f"Volume set to {int(new*100)}%"
+        except Exception as e:
+            return f"Volume error: {str(e)}"
+
+    def toggle_bluetooth(self, state: str) -> str:
+        """Toggle Bluetooth on Windows"""
+        try:
+            return self._execute_command([
+                "powershell", "-Command", 
+                f"Start-Process -Verb RunAs -FilePath 'pnputil' -ArgumentList '/{state} Bluetooth'"
+            ])
+        except Exception as e:
+            return f"Bluetooth error: {str(e)}"

@@ -6,6 +6,7 @@ from app_launcher_agent.file_agent import FileHandlingAgent
 from app_launcher_agent.code_agent import CodeGenerationAgent
 from app_launcher_agent.calculation_agent import CalculationAgent
 from app_launcher_agent.utils import format_chat_history
+from app_launcher_agent.system_agent import SystemControlAgent
 from dotenv import load_dotenv
 import os
 os.environ["LANGCHAIN_HANDLER"] = "false"
@@ -54,14 +55,14 @@ def main():
         st.session_state.file_agent = FileHandlingAgent(st.session_state.llm)
 
     if "code_agent" not in st.session_state:
-        st.session_state.code_agent = CodeGenerationAgent(st.session_state.llm)    
-    
-    st.title("🚀 AI Assistant")
+        st.session_state.code_agent = CodeGenerationAgent(st.session_state.llm)
+    if "system_agent" not in st.session_state:
+        st.session_state.system_agent = SystemControlAgent(st.session_state.llm)    
+        
+    st.title("🚀 CLICKLESS ")
     st.markdown("""
-    This AI assistant can:
-    - Open applications on your computer
-    - Generate and write content to text editors
-    - Perform file operations (list, create, delete, copy, move)            
+    Control everything with just your words!
+               
     """)
     
     for message in format_chat_history(st.session_state.chat_history):
@@ -71,26 +72,37 @@ def main():
     # Only ONE chat_input with a unique key
     user_input = st.chat_input("What would you like me to do?", key="main_chat_input")
 
-    if user_input and user_input.strip():
+    if user_input is not None and user_input.strip() != "":
         clean_input = user_input.strip()
+
+        st.session_state.chat_history.append(HumanMessage(content=clean_input))
 
         with st.chat_message("user"):
             st.markdown(clean_input)
-
-        st.session_state.chat_history.append(HumanMessage(content=clean_input))
         
         # Determine agent
         
         if any(kw in clean_input.lower() for kw in ["write", "essay", "article"]):
-            agent = st.session_state.writer_agent
+            if "[CODEREQUEST]" in clean_input:  # Check for code flag
+                agent = st.session_state.code_agent
+                clean_input = clean_input.replace("[CODEREQUEST]", "").strip()
+            else:
+                agent = st.session_state.writer_agent
+
+        elif any(kw in clean_input.lower() for kw in ["list", "create"]):
+            agent = st.session_state.file_agent
+
         elif any(kw in clean_input.lower() for kw in ["calculate", "+", "-", "*", "/", "="]):
             agent = st.session_state.calc_agent
+
         elif any(kw in clean_input.lower() for kw in ["open", "launch", "start"]):
             agent = st.session_state.app_agent
-        elif any(kw in clean_input.lower() for kw in ["list", "create", "delete", "copy", "move"]):
-            agent = st.session_state.file_agent
+            
         elif any(kw in clean_input.lower() for kw in ["code", "program", "algorithm", "function"]):
-            agent = st.session_state.code_agent    
+            agent = st.session_state.code_agent
+
+        elif any(kw in clean_input.lower() for kw in ["brightness", "volume", "bluetooth", "system"]):
+            agent = st.session_state.system_agent
         else:
             agent = st.session_state.app_agent
         

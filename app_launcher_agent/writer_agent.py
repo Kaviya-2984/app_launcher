@@ -1,3 +1,4 @@
+import re
 from typing import List, Union, Dict
 from langchain.agents import AgentExecutor, Tool, create_react_agent
 from langchain import hub
@@ -51,6 +52,8 @@ class WritingAgent:
     def _process_writing_request(self, input_text: str) -> str:
         """Clean and prepare the writing request, preserving editor info."""
         # Keep the editor information if specified
+        if any(kw in input_text.lower() for kw in ["code", "program", "algorithm"]):
+            return "[CODEREQUEST] " + input_text 
         if "winword.exe" in input_text.lower() or "wordpad.exe" in input_text.lower():
             return input_text
         

@@ -8,3 +8,6 @@ langchain-core
 pyautogui
 numpy
 pygetwindow
+pycaw
+comtypes
+wmi
